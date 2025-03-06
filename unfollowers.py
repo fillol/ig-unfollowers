@@ -10,8 +10,8 @@ try:
     from instagrapi import Client
     instagrapi_available = True
 except ImportError:
-print("\nWarning: 'instagrapi' library not found. The script will fall back to JSON mode.")
-print("To use the API mode, install 'instagrapi' with: pip install instagrapi\n")
+    print("\nWarning: 'instagrapi' library not found. The script will fall back to JSON mode.")
+    print("To use the API mode, install 'instagrapi' with: pip install instagrapi\n")
     instagrapi_available = False
     Client = None
 
