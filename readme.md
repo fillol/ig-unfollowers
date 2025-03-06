@@ -16,6 +16,34 @@ Script to filter a list of Instagram users who **do not reciprocate the "follow"
 - **Python 3.x** installed.
 - **Instagram JSON Files**: `followers.json` and `following.json`, exported from Instagram account settings.
 
+## How to Obtain Instagram JSON Files
+
+To use this script, you need to download your data from Instagram, specifically requesting the "Followers and following" information in JSON format. Here's how to do it:
+
+1.  **Go to your Profile**:
+    *   On the Instagram app, tap your profile picture in the bottom right corner to go to your profile.
+
+2.  **Access Your Activity**:
+    *   Tap the menu icon (three horizontal lines) in the top right corner.
+    *   Select **Your activity**.
+
+3.  **Download Your Information**:
+    *   Scroll down to "Information you shared with Instagram" and tap **Download your information**.
+    *   If you haven't entered your email address before, you'll be prompted to enter it. Then, tap **Request a download**.
+    *   Choose **Select types of information** under "Select information".
+    *   Scroll down and select **Followers and following**.
+    *   Under "Select file options", it's crucial to configure the following:
+        *   **Format**: Choose **JSON**.
+        *   **Date range**: Select **All time**.
+    *   Tap **Submit request**.
+
+4.  **Download Data from Email**:
+    *   Instagram will send an email with the subject "Your Instagram Data" containing a link to your data. This might take some time, potentially up to a day, but is usually faster.
+    *   Open the email and click **Download data**.
+    *   Follow the instructions on the Instagram website to finish downloading your information. You might need to navigate back to the "Download your information" page once it's ready.
+
+After downloading, you will receive a ZIP archive. Extract this archive, and you will find the `followers.json` and `following.json` files, which you should place in the same directory as the `unfollowers.py` script.
+
 ## Script Usage
 
 1. **Preparation**: Save the code as `unfollowers.py` and place `followers.json` and `following.json` in the same directory.
