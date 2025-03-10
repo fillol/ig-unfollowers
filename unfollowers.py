@@ -15,6 +15,7 @@ except ImportError:
     instagrapi_available = False
     Client = None
 
+
 THRESHOLD = 10000
 CACHE_FILE_PATH = 'follower_count_cache.json'
 RESULT_FILE_PATH = 'filtered_list.txt'
@@ -115,7 +116,7 @@ def safe_load_json_following(file_path, key):
     return result
 
 
-def fetch_follower_count_from_api(username, cl):
+def fetch_follower_count_from_api(username, cl=None):
     """Fetch follower count using Instagrapi API."""
     cache_hit_flag = False
     if username in follower_count_cache:
@@ -123,6 +124,16 @@ def fetch_follower_count_from_api(username, cl):
         return follower_count_cache[username], True
 
     try:
+        if cl is None:
+            temp_cl = Client()
+            if USERNAME_INSTAGRAM and PASSWORD_INSTAGRAM:
+                try:
+                    temp_cl.login(USERNAME_INSTAGRAM, PASSWORD_INSTAGRAM)
+                    logging.info("API login successful for follower count fetch in JSON mode.")
+                except Exception as login_error:
+                    logging.warning(f"API login failed for follower count fetch in JSON mode (continuing without login): {login_error}")
+            cl = temp_cl
+
         user_info = cl.user_info_by_username_v2(username)
         follower_count = user_info.follower_count
         follower_count_cache[username] = follower_count
@@ -165,8 +176,8 @@ def main():
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('--json', action='store_true', help=f"Force use of JSON files for followers/following\n \
-                             (files '{followers_file}' and '{following_file}' in current directory).\n \
-                             API credentials are not needed in this mode.")
+                                     (files '{followers_file}' and '{following_file}' in current directory).\n \
+                                     API credentials are not needed in this mode.")
     parser.add_argument('-u', '--username', type=str, help='Instagram username for API authentication (optional for public profiles).')
     parser.add_argument('-p', '--password', type=str, help='Instagram password for API authentication (optional for public profiles).')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable detailed logging (INFO level).')
@@ -183,15 +194,15 @@ def main():
 
     following_usernames = []
     followers_usernames = []
-    use_api = instagrapi_available and not args.json # Usa API se 'instagrapi' è disponibile e --json NON è usato
+    use_api = instagrapi_available and not args.json
 
-    if args.json or not instagrapi_available: # Forza modalità JSON se --json è usato OPPURE se instagrapi non è disponibile
-        use_api = False # Assicura che use_api sia False in modalità JSON (o fallback JSON)
+    if args.json or not instagrapi_available:
+        use_api = False
         logging.info("Using JSON files for input (or fallback to JSON due to missing instagrapi).")
         followers_usernames = safe_load_json_followers(followers_file)
         following_usernames = safe_load_json_following(following_file, 'relationships_following')
 
-    else: # Modalità API (instagrapi disponibile e --json NON usato)
+    else: # API Mode
         logging.info("Using Instagram API for input (default).")
         global USERNAME_INSTAGRAM, PASSWORD_INSTAGRAM
         USERNAME_INSTAGRAM = args.username
@@ -235,6 +246,9 @@ def main():
     total_users = len(non_reciprocal_usernames)
     processed_users_count = 0
 
+    cl_api_mode = cl if use_api else None
+
+
     for username in non_reciprocal_usernames:
         processed_users_count += 1
         percentage_complete = (processed_users_count / total_users) * 100
@@ -246,13 +260,8 @@ def main():
         update_progress_bar(percentage_complete, operation_text_length)
         print("")
 
-        if use_api:
-            follower_count, cache_hit = fetch_follower_count_from_api(username, cl)
-        else:
-            from instagram_follower_count_fetcher import fetch_follower_count
-            follower_count, cache_hit = fetch_follower_count(username)
-            if not cache_hit:
-                time.sleep(1)
+        follower_count, cache_hit = fetch_follower_count_from_api(username, cl_api_mode)
+
 
         if follower_count is None:
             logging.info(f"{username} included due to missing follower count data.")
