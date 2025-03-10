@@ -7,23 +7,13 @@ This script helps you filter your Instagram "following" list to identify users w
 
 ## Table of Contents
 
-1.  [Instagram Unfollowers Filter](#instagram-unfollowers-filter)
-    *   [Main Features](#main-features)
+1.  [Main Features](#main-features)
 2.  [Prerequisites](#prerequisites)
 3.  [How to Obtain Instagram JSON Files (for JSON Fallback Mode)](#how-to-obtain-instagram-json-files-for-json-fallback-mode)
 4.  [Script Usage](#script-usage)
-    *   [1. Installation](#1-installation)
-    *   [2. API Mode (Default - Recommended)](#2-api-mode-default---recommended)
-    *   [3. JSON Fallback Mode](#3-json-fallback-mode)
-    *   [4. Verbose Option (Detailed Logging)](#4-verbose-option-detailed-logging)
-    *   [5. Script Output](#5-script-output)
 5.  [Input Files](#input-files)
 6.  [Output Files](#output-files)
 7.  [Customization and Parameters](#customization-and-parameters)
-    *   [Follower Threshold (\`THRESHOLD\`)](#follower-threshold-threshold)
-    *   [Output File Names](#output-file-names)
-    *   [Command Line Arguments](#command-line-arguments)
-    *   [Logging Verbosity](#logging-verbosity)
 8.  [Important Considerations](#important-considerations)
 
 ## Main Features:
