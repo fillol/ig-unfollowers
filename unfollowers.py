@@ -146,10 +146,10 @@ def fetch_follower_count_api_mode(username, cl=None):
 
 
 def fetch_follower_count_from_webpage(username, max_retries=3, backoff_factor=2):
-    """Recupera il conteggio follower di un utente Instagram tramite scraping della pagina web."""
+    """Retrieves the follower count of an Instagram user by scraping their webpage."""
     cache_hit_flag = False
     if username in follower_count_cache:
-        logging.info(f"Cache hit per {username}, follower count: {follower_count_cache[username]} (webpage scraping)")
+        logging.info(f"Cache hit for {username}, follower count: {follower_count_cache[username]} (webpage scraping)")
         return follower_count_cache[username], True
 
     url = f"https://www.instagram.com/{username}/"
@@ -160,7 +160,7 @@ def fetch_follower_count_from_webpage(username, max_retries=3, backoff_factor=2)
         try:
             with urllib.request.urlopen(request, timeout=10) as response:
                 if response.getcode() != 200:
-                    logging.warning(f"Risposta HTTP {response.getcode()} per {username} (webpage scraping)")
+                    logging.warning(f"HTTP Response {response.getcode()} for {username} (webpage scraping)")
                     raise Exception(f"HTTP status {response.getcode()}")
                 page_content = response.read().decode('utf-8')
 
@@ -180,16 +180,16 @@ def fetch_follower_count_from_webpage(username, max_retries=3, backoff_factor=2)
                         follower_count_cache[username] = follower_count
                         return follower_count, False
                     else:
-                        logging.warning(f"Tentativo {attempt}: Pattern follower non trovato in meta tag 'og:description' per {username} (webpage scraping).")
+                        logging.warning(f"Attempt {attempt}: Follower pattern not found in 'og:description' meta tag for {username} (webpage scraping).")
                         return None, False
                 else:
-                    logging.warning(f"Tentativo {attempt}: Meta tag 'og:description' non trovato per {username} (webpage scraping).")
+                    logging.warning(f"Attempt {attempt}: 'og:description' meta tag not found for {username} (webpage scraping).")
                     return None, False
 
         except (urllib.error.HTTPError, urllib.error.URLError) as url_error:
-            logging.error(f"Tentativo {attempt}: Errore HTTP/URL per {username} (webpage scraping): {url_error}")
+            logging.error(f"Attempt {attempt}: HTTP/URL Error for {username} (webpage scraping): {url_error}")
         except Exception as e:
-            logging.error(f"Tentativo {attempt}: Errore generico per {username} (webpage scraping): {e}")
+            logging.error(f"Attempt {attempt}: Generic Error for {username} (webpage scraping): {e}")
 
         time.sleep(delay)
         delay *= backoff_factor
@@ -253,7 +253,7 @@ def main():
         followers_usernames = safe_load_json_followers(followers_file)
         following_usernames = safe_load_json_following(following_file, 'relationships_following')
 
-    else: # API Mode
+    else:  # API Mode
         use_api = True
         logging.info("Using Instagram API for input and follower counts (API mode).")
         global USERNAME_INSTAGRAM, PASSWORD_INSTAGRAM
@@ -316,7 +316,7 @@ def main():
         else:
             follower_count, cache_hit = fetch_follower_count_from_webpage(username)
         if not cache_hit and use_api:
-            time.sleep(1) 
+            time.sleep(1)
 
         if follower_count is None:
             logging.info(f"{username} included due to missing follower count data.")
