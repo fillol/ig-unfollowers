@@ -10,8 +10,10 @@ try:
     from instagrapi import Client
     instagrapi_available = True
 except ImportError:
-    print("\nWarning: 'instagrapi' library not found. The script will fall back to JSON mode.")
-    print("To use the API mode, install 'instagrapi' with: pip install instagrapi\n")
+    print("\nWarning: 'instagrapi' library not found. For API mode, install 'instagrapi' with: pip install instagrapi")
+    print("Script will proceed in JSON Fallback mode, using webpage scraping for follower counts.")
+    import urllib.request
+    import re
     instagrapi_available = False
     Client = None
 
@@ -116,11 +118,11 @@ def safe_load_json_following(file_path, key):
     return result
 
 
-def fetch_follower_count_from_api(username, cl=None):
+def fetch_follower_count_api_mode(username, cl=None):
     """Fetch follower count using Instagrapi API."""
     cache_hit_flag = False
     if username in follower_count_cache:
-        logging.info(f"Cache hit for {username}, follower count: {follower_count_cache[username]}")
+        logging.info(f"Cache hit for {username}, follower count: {follower_count_cache[username]} (API mode)")
         return follower_count_cache[username], True
 
     try:
@@ -129,9 +131,9 @@ def fetch_follower_count_from_api(username, cl=None):
             if USERNAME_INSTAGRAM and PASSWORD_INSTAGRAM:
                 try:
                     temp_cl.login(USERNAME_INSTAGRAM, PASSWORD_INSTAGRAM)
-                    logging.info("API login successful for follower count fetch in JSON mode.")
+                    logging.info("API login successful for follower count fetch in JSON mode (API fallback).")
                 except Exception as login_error:
-                    logging.warning(f"API login failed for follower count fetch in JSON mode (continuing without login): {login_error}")
+                    logging.warning(f"API login failed for follower count fetch in JSON mode (API fallback, continuing without login): {login_error}")
             cl = temp_cl
 
         user_info = cl.user_info_by_username_v2(username)
@@ -141,6 +143,58 @@ def fetch_follower_count_from_api(username, cl=None):
     except Exception as e:
         logging.error(f"Instagrapi API error for {username}: {e}")
         return None, False
+
+
+def fetch_follower_count_from_webpage(username, max_retries=3, backoff_factor=2):
+    """Recupera il conteggio follower di un utente Instagram tramite scraping della pagina web."""
+    cache_hit_flag = False
+    if username in follower_count_cache:
+        logging.info(f"Cache hit per {username}, follower count: {follower_count_cache[username]} (webpage scraping)")
+        return follower_count_cache[username], True
+
+    url = f"https://www.instagram.com/{username}/"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    request = urllib.request.Request(url, headers=headers)
+    delay = 1
+    for attempt in range(1, max_retries + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                if response.getcode() != 200:
+                    logging.warning(f"Risposta HTTP {response.getcode()} per {username} (webpage scraping)")
+                    raise Exception(f"HTTP status {response.getcode()}")
+                page_content = response.read().decode('utf-8')
+
+                meta_tag_match = re.search(r'<meta\s+property=["\']og:description["\']\s+content=["\']([^"\']*)["\']', page_content, re.IGNORECASE)
+                if meta_tag_match:
+                    meta_content = meta_tag_match.group(1)
+                    follower_match = re.search(r"([0-9.,]+)([MK]?)\s*follower(?:s)?(?:,|)?", meta_content, re.IGNORECASE)
+                    if follower_match:
+                        count_str = follower_match.group(1).replace(",", ".")
+                        unit_indicator = follower_match.group(2).upper()
+                        count = float(count_str)
+                        if unit_indicator == 'M':
+                            count *= 1000000
+                        elif unit_indicator == 'K':
+                            count *= 1000
+                        follower_count = int(count)
+                        follower_count_cache[username] = follower_count
+                        return follower_count, False
+                    else:
+                        logging.warning(f"Tentativo {attempt}: Pattern follower non trovato in meta tag 'og:description' per {username} (webpage scraping).")
+                        return None, False
+                else:
+                    logging.warning(f"Tentativo {attempt}: Meta tag 'og:description' non trovato per {username} (webpage scraping).")
+                    return None, False
+
+        except (urllib.error.HTTPError, urllib.error.URLError) as url_error:
+            logging.error(f"Tentativo {attempt}: Errore HTTP/URL per {username} (webpage scraping): {url_error}")
+        except Exception as e:
+            logging.error(f"Tentativo {attempt}: Errore generico per {username} (webpage scraping): {e}")
+
+        time.sleep(delay)
+        delay *= backoff_factor
+
+    return None, False
 
 
 def update_progress_bar(percentage, operation_text_length):
@@ -170,16 +224,13 @@ def main():
     followers_file = FOLLOWER_FILE_DEFAULT
     following_file = FOLLOWING_FILE_DEFAULT
 
-    parser = argparse.ArgumentParser(description="Script to filter non-reciprocal Instagram users.\n \
-                                     By default, it uses Instagram API if 'instagrapi' library is installed.\n \
-                                     Otherwise, or if --json option is used, it uses exported JSON files.",
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description="Script to filter non-reciprocal Instagram users.\n By default, it uses Instagram API if 'instagrapi' library is installed.\n \
+                                     Otherwise, or if --json option is used, it uses exported JSON files and webpage scraping.", formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('--json', action='store_true', help=f"Force use of JSON files for followers/following\n \
-                                     (files '{followers_file}' and '{following_file}' in current directory).\n \
-                                     API credentials are not needed in this mode.")
-    parser.add_argument('-u', '--username', type=str, help='Instagram username for API authentication (optional for public profiles).')
-    parser.add_argument('-p', '--password', type=str, help='Instagram password for API authentication (optional for public profiles).')
+    parser.add_argument('--json', action='store_true', help=f"Force use of JSON files for followers/following\n (files '{followers_file}' and '{following_file}' in current directory).\n \
+                                     Follower counts will be fetched by webpage scraping (no API credentials needed in this mode, and no instagrapi dependency required for basic execution).")
+    parser.add_argument('-u', '--username', type=str, help='Instagram username for API authentication (optional for public profiles, needed for private profiles or to avoid rate limits in API mode).')
+    parser.add_argument('-p', '--password', type=str, help='Instagram password for API authentication (optional for public profiles, needed for private profiles or to avoid rate limits in API mode).')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable detailed logging (INFO level).')
 
     args = parser.parse_args()
@@ -198,12 +249,13 @@ def main():
 
     if args.json or not instagrapi_available:
         use_api = False
-        logging.info("Using JSON files for input (or fallback to JSON due to missing instagrapi).")
+        logging.info("Using JSON files for input and webpage scraping for follower counts (JSON Fallback mode).")
         followers_usernames = safe_load_json_followers(followers_file)
         following_usernames = safe_load_json_following(following_file, 'relationships_following')
 
     else: # API Mode
-        logging.info("Using Instagram API for input (default).")
+        use_api = True
+        logging.info("Using Instagram API for input and follower counts (API mode).")
         global USERNAME_INSTAGRAM, PASSWORD_INSTAGRAM
         USERNAME_INSTAGRAM = args.username
         PASSWORD_INSTAGRAM = args.password
@@ -230,7 +282,7 @@ def main():
             print("  - Credentials are correct (if provided).")
             print("  - Two-factor auth is disabled/handled.")
             print("  - Instagram isn't blocking requests (try later).")
-            print("Alternatively, use --json option to use exported JSON files (no API).")
+            print("Alternatively, use --json option to use exported JSON files and webpage scraping (no API login needed).")
             sys.exit(1)
 
 
@@ -240,7 +292,6 @@ def main():
     print("")
     print(f"Loaded {len(followers_usernames)} followers and {len(following_usernames)} following. Found {len(non_reciprocal_usernames)} non-reciprocal accounts.")
     print("")
-
 
     result_list = []
     total_users = len(non_reciprocal_usernames)
@@ -260,8 +311,12 @@ def main():
         update_progress_bar(percentage_complete, operation_text_length)
         print("")
 
-        follower_count, cache_hit = fetch_follower_count_from_api(username, cl_api_mode)
-
+        if use_api:
+            follower_count, cache_hit = fetch_follower_count_api_mode(username, cl_api_mode)
+        else:
+            follower_count, cache_hit = fetch_follower_count_from_webpage(username)
+        if not cache_hit and use_api:
+            time.sleep(1) 
 
         if follower_count is None:
             logging.info(f"{username} included due to missing follower count data.")
