@@ -5,6 +5,27 @@ This script helps you filter your Instagram "following" list to identify users w
 1.  **API Mode (Default)**: Leverages the **Instagram API** via the `instagrapi` library to directly fetch follower and following data, and to retrieve follower counts for filtering. This mode is generally faster and more reliable and is recommended for most users, **especially if the `instagrapi` library is installed**.
 2.  **JSON Fallback Mode**: Uses **exported JSON files** from Instagram for your follower and following lists.  In this mode, **follower counts are retrieved by scraping Instagram user webpages**, **without relying on the `instagrapi` library for follower count retrieval**. This mode is intended as a **fallback option** for cases where `instagrapi` is not installed or when you prefer not to use the Instagram API directly for fetching follower counts.
 
+## Table of Contents
+
+1.  [Instagram Unfollowers Filter](#instagram-unfollowers-filter)
+    *   [Main Features](#main-features)
+2.  [Prerequisites](#prerequisites)
+3.  [How to Obtain Instagram JSON Files (for JSON Fallback Mode)](#how-to-obtain-instagram-json-files-for-json-fallback-mode)
+4.  [Script Usage](#script-usage)
+    *   [1. Installation](#1-installation)
+    *   [2. API Mode (Default - Recommended)](#2-api-mode-default---recommended)
+    *   [3. JSON Fallback Mode](#3-json-fallback-mode)
+    *   [4. Verbose Option (Detailed Logging)](#4-verbose-option-detailed-logging)
+    *   [5. Script Output](#5-script-output)
+5.  [Input Files](#input-files)
+6.  [Output Files](#output-files)
+7.  [Customization and Parameters](#customization-and-parameters)
+    *   [Follower Threshold (\`THRESHOLD\`)](#follower-threshold-threshold)
+    *   [Output File Names](#output-file-names)
+    *   [Command Line Arguments](#command-line-arguments)
+    *   [Logging Verbosity](#logging-verbosity)
+8.  [Important Considerations](#important-considerations)
+
 ## Main Features:
 
 -   **Dual Mode Operation**: Choose between **API mode** (default, using `instagrapi` for direct API access) and **JSON Fallback mode** (using exported JSON files for initial data, with **webpage scraping for follower counts**).
